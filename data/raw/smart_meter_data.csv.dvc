@@ -1,0 +1,5 @@
+outs:
+- md5: df12deb96811cb6c8772eb39c0c00c43
+  size: 619684
+  hash: md5
+  path: smart_meter_data.csv
