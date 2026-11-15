@@ -68,12 +68,8 @@ def main():
     
     n = len(df)
     train_end = int(n * 0.70)
-    # val_end = int(n * 0.85)
     
     X_train, y_train = X.iloc[:train_end], y.iloc[:train_end]
-    # X_val, y_val = X.iloc[train_end:val_end], y.iloc[train_end:val_end] (пока не используем)
-    # X_test, y_test = X.iloc[val_end:], y.iloc[val_end:] (пока не используем)
-    
     print(f"Размер Train: {len(X_train)} строк, из них аномалий: {y_train.sum()}")
     
     tscv = TimeSeriesSplit(n_splits=5, gap=48)
@@ -82,11 +78,11 @@ def main():
     
     models = {
         'Dummy (Most Frequent)': DummyClassifier(strategy='prior'),
-        'Logistic Regression L2': LogisticRegression(C=1.0, penalty='l2', max_iter=1000, class_weight='balanced', random_state=RANDOM_STATE),
-        'Logistic Regression L1': LogisticRegression(C=0.1, penalty='l1', solver='liblinear', max_iter=1000, class_weight='balanced', random_state=RANDOM_STATE),
+        'Logistic Regression L2': LogisticRegression(C=1.0, l1_ratio=0, max_iter=1000, class_weight='balanced', random_state=RANDOM_STATE),
+        'Logistic Regression L1': LogisticRegression(C=0.1, l1_ratio=1, solver='liblinear', max_iter=1000, class_weight='balanced', random_state=RANDOM_STATE),
         'kNN (k=25)': KNeighborsClassifier(n_neighbors=25),
-        'Decision Tree (max_depth=5)': DecisionTreeClassifier(max_depth=5, class_weight='balanced', random_state=RANDOM_STATE),
-        'Random Forest': RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=RANDOM_STATE, n_jobs=-1),
+        'Decision Tree (max_depth=10)': DecisionTreeClassifier(max_depth=10, class_weight='balanced', random_state=RANDOM_STATE),
+        'Random Forest': RandomForestClassifier(n_estimators=100, class_weight='balanced', random_state=RANDOM_STATE, n_jobs=1),
         'Gradient Boosting': HistGradientBoostingClassifier(max_iter=100, learning_rate=0.1, random_state=RANDOM_STATE)
     }
     
@@ -103,22 +99,22 @@ def main():
         results.append(res)
         print(f"   [{name}] PR-AUC: {res['pr_auc_mean']:.3f} ± {res['pr_auc_std']:.3f}, Время: {res['train_time_sec']}с")
     
-    print("4. Подбор гиперпараметров для Gradient Boosting.")
-    gb_pipeline = make_pipeline(HistGradientBoostingClassifier(random_state=RANDOM_STATE))
+    print("4. Подбор гиперпараметров для Random Forest.")
+    rf_pipeline = make_pipeline(RandomForestClassifier(class_weight='balanced', random_state=RANDOM_STATE, n_jobs=1))
     param_grid = {
-        'model__learning_rate': [0.05, 0.1],
-        'model__max_iter': [100, 200],
-        'model__max_depth': [3, 5]
+        'model__n_estimators': [100, 200],
+        'model__max_depth': [5, 10, None],
+        'model__min_samples_leaf': [1, 5]
     }
     
-    grid_search = GridSearchCV(gb_pipeline, param_grid, cv=tscv, scoring='average_precision', n_jobs=-1)
+    grid_search = GridSearchCV(rf_pipeline, param_grid, cv=tscv, scoring='average_precision', n_jobs=1)
     grid_search.fit(X_train, y_train)
     
     print(f"   Лучшие параметры: {grid_search.best_params_}")
     print(f"   Лучший PR-AUC: {grid_search.best_score_:.3f}")
     
     results.append({
-        'model': 'Gradient Boosting (Tuned)',
+        'model': 'Random Forest (Tuned)',
         'pr_auc_mean': grid_search.best_score_,
         'pr_auc_std': 0.0,
         'f1_mean': 0.0, 
@@ -126,7 +122,7 @@ def main():
         'train_time_sec': 0.0
     })
     
-    print("5. Сохранение результатов...")
+    print("5. Сохранение результатов.")
     results_df = pd.DataFrame(results)
     results_df.to_csv(os.path.join(REPORT_DIR, 'experiments.csv'), index=False)
     
