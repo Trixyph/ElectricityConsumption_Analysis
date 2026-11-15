@@ -1,0 +1,8 @@
+{
+ "version": "v1",
+ "trained": "2026-11-15",
+ "data": "initial_data.csv (train subset)",
+ "algorithm": "Random Forest",
+ "cv_pr_auc": 0.738,
+ "random_state": 29
+}
