@@ -1,0 +1,7 @@
+{
+ "version": "v2",
+ "trained": "2026-11-19",
+ "algorithm": "RandomForest (200 trees)",
+ "cv_pr_auc": 0.982,
+ "previous_version": "v1"
+}
